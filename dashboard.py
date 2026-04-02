@@ -76,6 +76,11 @@ st.divider()
 # ---------------- TASK SECTION ----------------
 st.subheader("📤 Run Distributed Task")
 
+task_type = st.selectbox(
+    "Select Task",
+    ["sort", "sum", "square"]
+)
+
 task_size = st.slider(
     "Select dataset size",
     min_value=1000,
@@ -101,7 +106,10 @@ if run_button:
 
         def call_worker(url, chunk, idx):
             try:
-                r = requests.post(f"{url}/process", json={"data": chunk})
+                r = requests.post(
+                    f"{url}/process",
+                    json={"data": chunk, "task": task_type}
+                )
                 results[idx] = r.json()
             except Exception as e:
                 errors.append(str(e))
@@ -134,6 +142,8 @@ if run_button:
         single_estimate = distributed_time * 2.8
         speedup = single_estimate / distributed_time
 
+        st.write(f"### 🧠 Task Selected: `{task_type}`")
+
         st.subheader("📊 Performance")
 
         col1, col2, col3 = st.columns(3)
@@ -151,15 +161,28 @@ if run_button:
 
         st.bar_chart(df.set_index("Mode"))
 
+        # ---------------- NODE BREAKDOWN ----------------
         st.subheader("🔍 Per Node Breakdown")
 
         for i, res in enumerate(results):
             if res:
-                st.write(
-                    f"**Node {i+1}** → "
-                    f"{len(res['result'])} items processed in "
-                    f"{res['time_taken']:.3f}s"
-                )
+                if task_type == "sum":
+                    st.write(
+                        f"**Node {i+1}** → "
+                        f"Computed partial sum in {res['time_taken']:.3f}s"
+                    )
+                else:
+                    st.write(
+                        f"**Node {i+1}** → "
+                        f"{len(res['result'])} items processed in "
+                        f"{res['time_taken']:.3f}s"
+                    )
+
+        # ---------------- TOTAL SUM ----------------
+        if task_type == "sum":
+            total = sum([r['result'] for r in results if r])
+            st.subheader(f"🔢 Total Sum: {total}")
+
     else:
         st.error(f"❌ Error occurred: {errors}")
 
