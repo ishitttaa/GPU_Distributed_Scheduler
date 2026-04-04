@@ -78,7 +78,7 @@ st.subheader("📤 Run Distributed Task")
 
 task_type = st.selectbox(
     "Select Task",
-    ["sort", "sum", "square"]
+    ["sort", "sum", "square", "filter_even"]
 )
 
 task_size = st.slider(
@@ -99,6 +99,11 @@ if run_button:
         progress = st.progress(0, text="Preparing task...")
 
         data = list(range(task_size, 0, -1))
+
+        # 🧹 DATA CLEANING
+        data = list(set(data))
+        data = [x for x in data if x is not None]
+
         start = time.time()
 
         results = [None, None, None]
@@ -108,11 +113,15 @@ if run_button:
             try:
                 r = requests.post(
                     f"{url}/process",
-                    json={"data": chunk, "task": task_type}
+                    json={"data": chunk, "task": task_type},
+                    timeout=5
                 )
-                results[idx] = r.json()
-            except Exception as e:
-                errors.append(str(e))
+                if r.status_code == 200:
+                    results[idx] = r.json()
+                else:
+                    results[idx] = None
+            except:
+                results[idx] = None
 
         chunks = [data[i::3] for i in range(3)]
 
@@ -161,27 +170,26 @@ if run_button:
 
         st.bar_chart(df.set_index("Mode"))
 
-        # ---------------- NODE BREAKDOWN ----------------
         st.subheader("🔍 Per Node Breakdown")
 
         for i, res in enumerate(results):
             if res:
                 if task_type == "sum":
                     st.write(
-                        f"**Node {i+1}** → "
-                        f"Computed partial sum in {res['time_taken']:.3f}s"
+                        f"**Node {i+1}** → Computed partial sum in {res['time_taken']:.3f}s"
                     )
                 else:
                     st.write(
-                        f"**Node {i+1}** → "
-                        f"{len(res['result'])} items processed in "
-                        f"{res['time_taken']:.3f}s"
+                        f"**Node {i+1}** → {len(res['result'])} items processed in {res['time_taken']:.3f}s"
                     )
 
-        # ---------------- TOTAL SUM ----------------
         if task_type == "sum":
             total = sum([r['result'] for r in results if r])
             st.subheader(f"🔢 Total Sum: {total}")
+
+        failed = [i+1 for i, r in enumerate(results) if r is None]
+        if failed:
+            st.warning(f"⚠️ Workers failed: {failed}")
 
     else:
         st.error(f"❌ Error occurred: {errors}")
