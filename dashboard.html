@@ -9,17 +9,17 @@
   @import url('https://fonts.googleapis.com/css2?family=Gobold:wght@400;700&family=DM+Sans:wght@300;400;500;700&display=swap');
 
   :root {
-    --bg:        #080c14;
-    --surface:   #0d1424;
-    --card:      #111827;
-    --border:    #1e2d45;
-    --accent:    #00d4ff;
-    --accent2:   #7c3aed;
-    --green:     #10b981;
-    --red:       #ef4444;
-    --yellow:    #f59e0b;
-    --text:      #e2e8f0;
-    --muted:     #64748b;
+    --bg: #080c14;
+    --surface: #0d1424;
+    --card: #111827;
+    --border: #1e2d45;
+    --accent: #00d4ff;
+    --accent2: #7c3aed;
+    --green: #10b981;
+    --red: #ef4444;
+    --yellow: #f59e0b;
+    --text: #e2e8f0;
+    --muted: #64748b;
     --font-mono: 'Gobold', sans-serif;
     --font-body: 'DM Sans', sans-serif;
   }
@@ -34,7 +34,6 @@
     overflow-x: hidden;
   }
 
-  /* ── Grid background ── */
   body::before {
     content: '';
     position: fixed;
@@ -47,10 +46,8 @@
     z-index: 0;
   }
 
-  /* ── Layout ── */
   .shell { position: relative; z-index: 1; max-width: 1300px; margin: 0 auto; padding: 0 24px 80px; }
 
-  /* ── Header ── */
   header {
     padding: 36px 0 28px;
     display: flex;
@@ -59,9 +56,8 @@
     border-bottom: 1px solid var(--border);
     margin-bottom: 32px;
   }
-  .logo {
-    display: flex; align-items: center; gap: 14px;
-  }
+
+  .logo { display: flex; align-items: center; gap: 14px; }
   .logo-icon {
     width: 44px; height: 44px;
     background: linear-gradient(135deg, var(--accent), var(--accent2));
@@ -69,31 +65,35 @@
     display: grid; place-items: center;
     font-size: 22px;
   }
+
   .logo-text h1 {
-    font-family: "Fontzilla Comic";
+    font-family: "Fontzilla Comic", var(--font-body);
     font-size: 1.5rem;
     letter-spacing: -0.5px;
     color: var(--text);
   }
+
   .logo-text p { font-size: 0.78rem; color: var(--muted); margin-top: 1px; }
 
   .header-right { display: flex; align-items: center; gap: 16px; }
+
   .live-badge {
     display: flex; align-items: center; gap: 6px;
     font-family: var(--font-mono); font-size: 0.72rem;
     color: var(--green); letter-spacing: 1px;
   }
+
   .live-dot {
     width: 8px; height: 8px; border-radius: 50%;
     background: var(--green);
     animation: pulse-dot 1.5s infinite;
   }
+
   @keyframes pulse-dot {
     0%,100% { opacity: 1; transform: scale(1); }
-    50%      { opacity: 0.5; transform: scale(1.4); }
+    50% { opacity: 0.5; transform: scale(1.4); }
   }
 
-  /* ── Section label ── */
   .section-label {
     font-family: var(--font-mono);
     font-size: 0.68rem;
@@ -103,7 +103,6 @@
     margin-bottom: 12px;
   }
 
-  /* ── Worker cards ── */
   .workers-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -120,6 +119,7 @@
     position: relative;
     overflow: hidden;
   }
+
   .worker-card::before {
     content: '';
     position: absolute;
@@ -128,9 +128,10 @@
     background: var(--green);
     transition: background 0.3s;
   }
+
   .worker-card.offline::before { background: var(--red); }
   .worker-card.anomaly::before { background: var(--yellow); }
-  .worker-card.busy::before    { background: var(--accent2); }
+  .worker-card.busy::before { background: var(--accent2); }
 
   .worker-card:hover {
     border-color: var(--accent);
@@ -141,30 +142,37 @@
     display: flex; align-items: center; justify-content: space-between;
     margin-bottom: 14px;
   }
+
   .worker-name {
     font-family: var(--font-mono); font-size: 0.88rem; font-weight: 700;
   }
+
   .status-pill {
     font-size: 0.7rem; font-family: var(--font-mono); padding: 3px 10px;
     border-radius: 20px; font-weight: 700; letter-spacing: 0.5px;
   }
+
   .status-pill.online  { background: rgba(16,185,129,0.15); color: var(--green); }
-  .status-pill.offline { background: rgba(239,68,68,0.15);  color: var(--red); }
+  .status-pill.offline { background: rgba(239,68,68,0.15); color: var(--red); }
   .status-pill.busy    { background: rgba(124,58,237,0.15); color: var(--accent2); }
   .status-pill.anomaly { background: rgba(245,158,11,0.15); color: var(--yellow); }
 
   .metric-row { display: flex; gap: 16px; margin-bottom: 10px; }
   .metric-item { flex: 1; }
   .metric-label { font-size: 0.68rem; color: var(--muted); margin-bottom: 4px; }
+
   .metric-bar {
     height: 4px; background: var(--border); border-radius: 2px; overflow: hidden;
   }
+
   .metric-fill {
     height: 100%; border-radius: 2px;
     background: linear-gradient(90deg, var(--accent), var(--accent2));
     transition: width 0.6s ease;
   }
+
   .metric-fill.danger { background: linear-gradient(90deg, var(--yellow), var(--red)); }
+
   .metric-value {
     font-family: var(--font-mono); font-size: 0.8rem; margin-top: 4px;
     color: var(--text);
@@ -174,13 +182,14 @@
     font-size: 0.72rem; color: var(--muted); margin-top: 8px;
     font-family: var(--font-mono);
   }
+
   .anomaly-warning {
     font-size: 0.7rem; color: var(--yellow);
     margin-top: 6px; display: none;
   }
+
   .worker-card.anomaly .anomaly-warning { display: block; }
 
-  /* ── Control panel ── */
   .panel {
     background: var(--card);
     border: 1px solid var(--border);
@@ -188,6 +197,7 @@
     padding: 28px;
     margin-bottom: 24px;
   }
+
   .panel h2 {
     font-family: var(--font-mono); font-size: 1rem;
     margin-bottom: 22px;
@@ -195,11 +205,11 @@
   }
 
   .controls-row {
-      display: grid;
-      grid-template-columns: 1.2fr 1fr 0.8fr 1fr auto;
-      gap: 16px;
-      align-items: end;
-    }
+    display: grid;
+    grid-template-columns: 1.2fr 1fr 0.9fr 1fr auto;
+    gap: 16px;
+    align-items: end;
+  }
 
   .form-group label {
     display: block;
@@ -221,16 +231,19 @@
     transition: border-color 0.2s;
     appearance: none;
   }
+
   select:hover, select:focus {
     border-color: var(--accent);
     box-shadow: 0 0 0 3px rgba(0,212,255,0.08);
   }
 
   .slider-wrap { position: relative; }
+
   .slider-value {
     position: absolute; right: 0; top: -26px;
     font-family: var(--font-mono); font-size: 0.75rem; color: var(--accent);
   }
+
   input[type=range] {
     padding: 0; height: 6px; border-radius: 3px; cursor: pointer;
     accent-color: var(--accent);
@@ -244,10 +257,12 @@
     letter-spacing: 0.5px; transition: all 0.2s;
     white-space: nowrap;
   }
+
   .btn-primary {
     background: linear-gradient(135deg, var(--accent), #0099cc);
     color: #000;
   }
+
   .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(0,212,255,0.3); }
   .btn-primary:active { transform: none; }
   .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
@@ -256,15 +271,16 @@
     background: rgba(239,68,68,0.15);
     color: var(--red); border: 1px solid rgba(239,68,68,0.3);
   }
+
   .btn-danger:hover { background: rgba(239,68,68,0.25); }
 
-  /* ── Results ── */
   .results-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 14px;
     margin-bottom: 24px;
   }
+
   .stat-card {
     background: var(--card);
     border: 1px solid var(--border);
@@ -273,10 +289,12 @@
     text-align: center;
     transition: all 0.3s;
   }
+
   .stat-card.highlight {
     border-color: var(--accent);
     box-shadow: 0 0 20px rgba(0,212,255,0.1);
   }
+
   .stat-card .value {
     font-family: var(--font-mono);
     font-size: 1.9rem; font-weight: 700;
@@ -284,11 +302,11 @@
     line-height: 1;
     margin-bottom: 6px;
   }
+
   .stat-card .label {
     font-size: 0.72rem; color: var(--muted); letter-spacing: 0.5px;
   }
 
-  /* ── Charts ── */
   .charts-row {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -302,49 +320,54 @@
     border-radius: 16px;
     padding: 22px;
   }
+
   .chart-title {
     font-family: var(--font-mono); font-size: 0.82rem;
     margin-bottom: 16px; color: var(--muted);
   }
+
   .chart-wrap { height: 200px; }
 
-  /* ── Per-node breakdown ── */
   .node-table {
     width: 100%;
     border-collapse: collapse;
   }
+
   .node-table th {
     font-family: var(--font-mono); font-size: 0.68rem;
     letter-spacing: 1px; color: var(--muted);
     text-align: left; padding: 10px 12px;
     border-bottom: 1px solid var(--border);
   }
+
   .node-table td {
     padding: 12px 12px;
     font-size: 0.84rem;
     border-bottom: 1px solid rgba(30,45,69,0.5);
   }
+
   .node-table tr:last-child td { border-bottom: none; }
 
-  /* ── Fault alert ── */
   .alert {
     padding: 14px 18px; border-radius: 10px;
     font-size: 0.85rem; margin-bottom: 20px;
     display: none;
   }
+
   .alert.show { display: flex; align-items: center; gap: 10px; }
+
   .alert-recovery {
     background: rgba(16,185,129,0.1);
     border: 1px solid rgba(16,185,129,0.3);
     color: var(--green);
   }
+
   .alert-fault {
     background: rgba(245,158,11,0.1);
     border: 1px solid rgba(245,158,11,0.3);
     color: var(--yellow);
   }
 
-  /* ── Log ── */
   .log-panel {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -357,6 +380,7 @@
     color: var(--muted);
     line-height: 1.8;
   }
+
   .log-entry { display: flex; gap: 10px; }
   .log-time  { color: var(--accent); flex-shrink: 0; }
   .log-msg.success { color: var(--green); }
@@ -364,14 +388,16 @@
   .log-msg.warn    { color: var(--yellow); }
   .log-msg.info    { color: var(--text); }
 
-  /* ── Loading overlay ── */
   .loading-overlay {
     position: fixed; inset: 0; background: rgba(8,12,20,0.85);
     display: none; place-items: center; z-index: 100;
     backdrop-filter: blur(4px);
   }
+
   .loading-overlay.show { display: grid; }
+
   .spinner-box { text-align: center; }
+
   .spinner {
     width: 56px; height: 56px; border-radius: 50%;
     border: 3px solid var(--border);
@@ -379,27 +405,29 @@
     animation: spin 0.8s linear infinite;
     margin: 0 auto 16px;
   }
+
   @keyframes spin { to { transform: rotate(360deg); } }
+
   .spinner-text {
     font-family: var(--font-mono); font-size: 0.85rem; color: var(--muted);
   }
+
   .spinner-sub {
     font-family: var(--font-mono); font-size: 0.72rem; color: var(--accent);
     margin-top: 6px; animation: blink 1.2s infinite;
   }
+
   @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
 
-  /* ── Demo button row ── */
   .demo-row {
     display: flex; gap: 12px; margin-top: 16px;
   }
 
-  /* ── Responsive ── */
   @media (max-width: 900px) {
-    .workers-grid    { grid-template-columns: 1fr; }
-    .controls-row    { grid-template-columns: 1fr; }
-    .results-grid    { grid-template-columns: repeat(2, 1fr); }
-    .charts-row      { grid-template-columns: 1fr; }
+    .workers-grid { grid-template-columns: 1fr; }
+    .controls-row { grid-template-columns: 1fr; }
+    .results-grid { grid-template-columns: repeat(2, 1fr); }
+    .charts-row { grid-template-columns: 1fr; }
   }
 </style>
 </head>
@@ -414,8 +442,6 @@
 </div>
 
 <div class="shell">
-
-  <!-- HEADER -->
   <header>
     <div class="logo">
       <div class="logo-icon">⚡</div>
@@ -433,13 +459,9 @@
     </div>
   </header>
 
-  <!-- WORKER NODES -->
   <div class="section-label">// WORKER NODES</div>
-  <div class="workers-grid" id="workersGrid">
-    <!-- Populated by JS -->
-  </div>
+  <div class="workers-grid" id="workersGrid"></div>
 
-  <!-- CONTROL PANEL -->
   <div class="panel">
     <h2>⚙️ Task Control</h2>
     <div class="controls-row">
@@ -449,60 +471,57 @@
           <option value="sort">Sort — Merge Sort across nodes</option>
           <option value="sum">Sum — Parallel summation</option>
           <option value="square">Square — Map transformation</option>
+          <option value="gpu_square">GPU Square — CUDA tensor square</option>
           <option value="filter_even">Filter Even — Distributed filter</option>
           <option value="filter_odd">Filter Odd — Distributed filter</option>
           <option value="normalize">Normalize — Min-max scaling</option>
+          <option value="preprocess">Preprocess — Hybrid prep stage</option>
         </select>
-  </div>
+      </div>
 
-  <div class="form-group">
-    <label>DATASET SIZE</label>
-      <div class="slider-wrap">
-        <span class="slider-value" id="sliderVal">10,000</span>
-        <input type="range" id="dataSize"
-          min="1000" max="50000" step="1000" value="10000"
-          oninput="document.getElementById('sliderVal').textContent = (+this.value).toLocaleString()"
-        />
+      <div class="form-group">
+        <label>DATASET SIZE</label>
+        <div class="slider-wrap">
+          <span class="slider-value" id="sliderVal">10,000</span>
+          <input type="range" id="dataSize" min="1000" max="50000" step="1000" value="10000"
+            oninput="document.getElementById('sliderVal').textContent = (+this.value).toLocaleString()" />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>EXECUTION MODE</label>
+        <select id="runMode" onchange="toggleModeFields()">
+          <option value="cpu">CPU only</option>
+          <option value="gpu">GPU only</option>
+          <option value="hybrid">Hybrid</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>MIN VRAM / RAM (GB)</label>
+        <div style="display:flex; gap:10px;">
+          <select id="minVramGb">
+            <option value="0">VRAM 0</option>
+            <option value="2">VRAM 2</option>
+            <option value="4">VRAM 4</option>
+            <option value="6">VRAM 6</option>
+            <option value="8">VRAM 8</option>
+          </select>
+          <select id="minRamGb">
+            <option value="0">RAM 0</option>
+            <option value="2">RAM 2</option>
+            <option value="4">RAM 4</option>
+            <option value="8">RAM 8</option>
+            <option value="16">RAM 16</option>
+          </select>
+        </div>
+      </div>
+
+      <button class="btn btn-primary" id="runBtn" onclick="runTask()">▶ Run Task</button>
     </div>
-  </div>
-
-  <div class="form-group">
-    <label>GPU REQUIRED</label>
-    <select id="gpuRequired" onchange="toggleGpuFields()">
-      <option value="false">No</option>
-      <option value="true">Yes</option>
-    </select>
-  </div>
-
-  <div class="form-group">
-    <label>MIN VRAM / RAM (GB)</label>
-    <div style="display:flex; gap:10px;">
-      <select id="minVramGb">
-        <option value="0">VRAM 0</option>
-        <option value="2">VRAM 2</option>
-        <option value="4">VRAM 4</option>
-        <option value="6">VRAM 6</option>
-        <option value="8">VRAM 8</option>
-      </select>
-      <select id="minRamGb">
-        <option value="0">RAM 0</option>
-        <option value="2">RAM 2</option>
-        <option value="4">RAM 4</option>
-        <option value="8">RAM 8</option>
-        <option value="16">RAM 16</option>
-      </select>
-    </div>
-  </div>
-
-  <button class="btn btn-primary" id="runBtn" onclick="runTask()">
-    ▶ Run Task
-  </button>
-</div>
 
     <div class="demo-row">
-      <button class="btn btn-danger" onclick="runBenchmark()" id="benchBtn">
-        📊 Benchmark
-      </button>
+      <button class="btn btn-danger" onclick="runBenchmark()" id="benchBtn">📊 Benchmark</button>
       <button class="btn" style="background:rgba(124,58,237,0.15);color:#a78bfa;border:1px solid rgba(124,58,237,0.3)"
         onclick="demoFaultTolerance()" id="faultBtn">
         💀 Demo: Kill a Worker
@@ -510,11 +529,9 @@
     </div>
   </div>
 
-  <!-- ALERTS -->
-  <div class="alert alert-fault"   id="alertFault">⚠️ <span id="alertFaultMsg"></span></div>
+  <div class="alert alert-fault" id="alertFault">⚠️ <span id="alertFaultMsg"></span></div>
   <div class="alert alert-recovery" id="alertRecovery">✅ <span id="alertRecoveryMsg"></span></div>
 
-  <!-- STATS -->
   <div class="results-grid" id="statsGrid" style="display:none">
     <div class="stat-card highlight">
       <div class="value" id="statDistTime">—</div>
@@ -534,29 +551,24 @@
     </div>
   </div>
 
-  <!-- CHARTS -->
   <div class="charts-row" id="chartsRow" style="display:none">
     <div class="chart-panel">
       <div class="chart-title">// PERFORMANCE COMPARISON</div>
-      <div class="chart-wrap">
-        <canvas id="perfChart"></canvas>
-      </div>
+      <div class="chart-wrap"><canvas id="perfChart"></canvas></div>
     </div>
     <div class="chart-panel">
       <div class="chart-title">// PER-NODE PROCESSING TIME (s)</div>
-      <div class="chart-wrap">
-        <canvas id="nodeChart"></canvas>
-      </div>
+      <div class="chart-wrap"><canvas id="nodeChart"></canvas></div>
     </div>
   </div>
 
-  <!-- PER NODE BREAKDOWN -->
   <div class="panel" id="nodePanel" style="display:none">
     <h2>🔍 Per-Node Breakdown</h2>
     <table class="node-table" id="nodeTable">
       <thead>
         <tr>
           <th>NODE</th>
+          <th>MODE</th>
           <th>ITEMS PROCESSED</th>
           <th>TIME (s)</th>
           <th>CPU BEFORE</th>
@@ -569,7 +581,6 @@
     </table>
   </div>
 
-  <!-- LOG -->
   <div class="section-label" style="margin-top:8px">// SYSTEM LOG</div>
   <div class="log-panel" id="logPanel">
     <div class="log-entry">
@@ -577,8 +588,7 @@
       <span class="log-msg info">EduGrid dashboard initialised. Polling workers...</span>
     </div>
   </div>
-
-</div><!-- /shell -->
+</div>
 
 <script>
 const API = 'http://localhost:9000';
@@ -586,23 +596,21 @@ const API = 'http://localhost:9000';
 let perfChart = null;
 let nodeChart = null;
 
-// ── Logging ──────────────────────────────────────────────────────────────
 function log(msg, type = 'info') {
   const panel = document.getElementById('logPanel');
-  const now   = new Date().toTimeString().slice(0,8);
-  const el    = document.createElement('div');
+  const now = new Date().toTimeString().slice(0, 8);
+  const el = document.createElement('div');
   el.className = 'log-entry';
   el.innerHTML = `<span class="log-time">${now}</span><span class="log-msg ${type}">${msg}</span>`;
   panel.appendChild(el);
   panel.scrollTop = panel.scrollHeight;
 }
 
-// ── Worker cards ─────────────────────────────────────────────────────────
 async function refreshWorkers() {
   try {
-    const res  = await fetch(`${API}/workers`);
+    const res = await fetch(`${API}/workers`);
     const data = await res.json();
-    renderWorkers(data.workers);
+    renderWorkers(data.workers || []);
   } catch (e) {
     log('Cannot reach API gateway — is it running on port 9000?', 'error');
   }
@@ -614,24 +622,26 @@ function renderWorkers(workers) {
 
   workers.forEach(w => {
     const isOffline = w.status === 'offline';
-    const isBusy    = w.status === 'busy';
+    const isBusy = w.status === 'busy';
     const isAnomaly = w.anomaly && !isOffline;
 
     let cardClass = 'worker-card';
-    if (isOffline)      cardClass += ' offline';
+    if (isOffline) cardClass += ' offline';
     else if (isAnomaly) cardClass += ' anomaly';
-    else if (isBusy)    cardClass += ' busy';
+    else if (isBusy) cardClass += ' busy';
 
     const statusText = isOffline ? 'OFFLINE' : isAnomaly ? 'ANOMALY' : isBusy ? 'BUSY' : 'ONLINE';
-    const cpuDanger  = w.cpu > 80;
-    const ramDanger  = w.ram > 80;
-
+    const cpuDanger = (w.cpu || 0) > 80;
+    const ramDanger = (w.ram || 0) > 80;
     const gpuAvailable = w.gpu_available ? 'YES' : 'NO';
     const gpuName = w.gpu_name || 'No GPU';
     const vramFree = w.vram_free_gb ?? 0;
     const ramFree = w.ram_free_gb ?? 0;
     const gpuUtil = w.gpu_utilization ?? 0;
     const gpuDanger = gpuUtil > 80;
+    const role = w.node_role || 'unknown';
+    const cpuWeight = w.cpu_weight ?? 1.0;
+    const gpuWeight = w.gpu_weight ?? 0.0;
 
     grid.innerHTML += `
       <div class="${cardClass}">
@@ -643,13 +653,13 @@ function renderWorkers(workers) {
         <div class="metric-row">
           <div class="metric-item">
             <div class="metric-label">CPU</div>
-            <div class="metric-bar"><div class="metric-fill ${cpuDanger ? 'danger' : ''}" style="width:${w.cpu}%"></div></div>
-            <div class="metric-value">${w.cpu?.toFixed(1) ?? 0}%</div>
+            <div class="metric-bar"><div class="metric-fill ${cpuDanger ? 'danger' : ''}" style="width:${w.cpu || 0}%"></div></div>
+            <div class="metric-value">${(w.cpu ?? 0).toFixed(1)}%</div>
           </div>
           <div class="metric-item">
             <div class="metric-label">RAM</div>
-            <div class="metric-bar"><div class="metric-fill ${ramDanger ? 'danger' : ''}" style="width:${w.ram}%"></div></div>
-            <div class="metric-value">${w.ram?.toFixed(1) ?? 0}%</div>
+            <div class="metric-bar"><div class="metric-fill ${ramDanger ? 'danger' : ''}" style="width:${w.ram || 0}%"></div></div>
+            <div class="metric-value">${(w.ram ?? 0).toFixed(1)}%</div>
           </div>
         </div>
 
@@ -657,7 +667,7 @@ function renderWorkers(workers) {
           <div class="metric-item">
             <div class="metric-label">GPU UTIL</div>
             <div class="metric-bar"><div class="metric-fill ${gpuDanger ? 'danger' : ''}" style="width:${gpuUtil}%"></div></div>
-            <div class="metric-value">${gpuUtil?.toFixed(1) ?? 0}%</div>
+            <div class="metric-value">${(gpuUtil ?? 0).toFixed(1)}%</div>
           </div>
           <div class="metric-item">
             <div class="metric-label">GPU</div>
@@ -665,15 +675,10 @@ function renderWorkers(workers) {
           </div>
         </div>
 
-        <div class="worker-tasks">
-          Tasks done: ${w.total_tasks_done ?? 0} &nbsp;|&nbsp; Port: ${w.port}
-        </div>
-        <div class="worker-tasks">
-          RAM Free: ${ramFree} GB &nbsp;|&nbsp; VRAM Free: ${vramFree} GB
-        </div>
-        <div class="worker-tasks">
-          GPU: ${gpuName}
-        </div>
+        <div class="worker-tasks">Tasks done: ${w.total_tasks_done ?? 0} | Port: ${w.port}</div>
+        <div class="worker-tasks">Role: ${role} | CPU wt: ${cpuWeight} | GPU wt: ${gpuWeight}</div>
+        <div class="worker-tasks">RAM Free: ${ramFree} GB | VRAM Free: ${vramFree} GB</div>
+        <div class="worker-tasks">GPU: ${gpuName}</div>
 
         <div class="anomaly-warning">⚠ CPU spike detected — load reduced</div>
       </div>
@@ -681,73 +686,85 @@ function renderWorkers(workers) {
   });
 }
 
-// ── Loading overlay ───────────────────────────────────────────────────────
 function showLoading(text = 'Distributing task...', sub = 'Sending chunks to workers') {
   document.getElementById('spinnerText').textContent = text;
-  document.getElementById('spinnerSub').textContent  = sub;
+  document.getElementById('spinnerSub').textContent = sub;
   document.getElementById('loadingOverlay').classList.add('show');
 }
+
 function hideLoading() {
   document.getElementById('loadingOverlay').classList.remove('show');
 }
-function toggleGpuFields() {
-  const gpuRequired = document.getElementById('gpuRequired').value === 'true';
-  document.getElementById('minVramGb').disabled = !gpuRequired;
+
+function toggleModeFields() {
+  const mode = document.getElementById('runMode').value;
+  const needsGpu = (mode === 'gpu' || mode === 'hybrid');
+  document.getElementById('minVramGb').disabled = !needsGpu;
 }
-// ── Run task ──────────────────────────────────────────────────────────────
+
 async function runTask() {
   const task = document.getElementById('taskType').value;
   const size = +document.getElementById('dataSize').value;
-  const gpuRequired = document.getElementById('gpuRequired').value === 'true';
+  const mode = document.getElementById('runMode').value;
   const minVramGb = +document.getElementById('minVramGb').value;
   const minRamGb = +document.getElementById('minRamGb').value;
-  const btn  = document.getElementById('runBtn');
+  const btn = document.getElementById('runBtn');
 
   btn.disabled = true;
-  showLoading('Distributing task...', `${size.toLocaleString()} items → parallel workers`);
   hideAlerts();
+
+  let sub = `${size.toLocaleString()} items → parallel workers`;
+  if (mode === 'gpu') sub = `${size.toLocaleString()} items → GPU workers only`;
+  if (mode === 'hybrid') sub = `${size.toLocaleString()} items → CPU preprocess + GPU final stage`;
+
+  showLoading('Distributing task...', sub);
+
   log(
-  `Running task: ${task} on ${size.toLocaleString()} items | GPU=${gpuRequired} | VRAM>=${minVramGb}GB | RAM>=${minRamGb}GB`,
-  'info'
-);
+    `Running task: ${task} on ${size.toLocaleString()} items | MODE=${mode} | VRAM>=${minVramGb}GB | RAM>=${minRamGb}GB`,
+    'info'
+  );
 
   try {
-   const res  = await fetch(`${API}/run`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-    task,
-    size,
-    gpu_required: gpuRequired,
-    min_vram_gb: minVramGb,
-    min_ram_gb: minRamGb
-  })
-});
+    const res = await fetch(`${API}/run`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        task,
+        size,
+        mode,
+        min_vram_gb: minVramGb,
+        min_ram_gb: minRamGb
+      })
+    });
+
     const data = await res.json();
     hideLoading();
 
     if (data.error) {
-        log(
-          `Error: ${data.error} | GPU=${data.gpu_required} | VRAM>=${data.min_vram_gb}GB | RAM>=${data.min_ram_gb}GB`,
-          'error'
-        );
-        showAlert('fault', 'No eligible node available for the requested resources.');
-        return;
-      }
-
-    // Fault + recovery alerts
-    if (data.fault_occurred && data.recovered) {
-      showAlert('recovery', `Worker failed mid-task — auto-recovered! All ${data.workers_used} results merged successfully.`);
-      log('FAULT TOLERANCE ACTIVATED: chunk redistributed and recovered!', 'warn');
-    } else if (data.fault_occurred) {
-      showAlert('fault', 'A worker failed during task execution.');
-      log('Worker failure detected', 'error');
+      log(
+        `Error: ${data.error} | MODE=${data.mode ?? mode} | VRAM>=${data.min_vram_gb ?? minVramGb}GB | RAM>=${data.min_ram_gb ?? minRamGb}GB`,
+        'error'
+      );
+      showAlert('fault', data.error);
+      return;
     }
 
-    // Show stats (using real benchmark for comparison)
-    runBenchmarkQuiet(task, size, data);
+    if (data.fault_occurred && data.recovered) {
+      showAlert('recovery', `Worker failed mid-task — auto-recovered. All ${data.workers_used} worker results were merged successfully.`);
+      log('FAULT TOLERANCE ACTIVATED: chunk redistributed and recovered.', 'warn');
+    } else if (data.fault_occurred) {
+      showAlert('fault', 'A worker failed during task execution.');
+      log('Worker failure detected.', 'error');
+    }
 
+    if (mode === 'hybrid') {
+      log('Hybrid pipeline complete: CPU preprocessing + GPU final compute.', 'success');
+    }
+
+    showStats(data.total_time, '—', '—', data.workers_used);
+    drawPerfChart(null, data.total_time);
     renderNodeTable(data.per_node);
+
     log(`Task complete in ${data.total_time}s using ${data.workers_used} worker(s)`, 'success');
 
   } catch (e) {
@@ -759,21 +776,21 @@ async function runTask() {
   }
 }
 
-// ── Benchmark ─────────────────────────────────────────────────────────────
 async function runBenchmark() {
   const task = document.getElementById('taskType').value;
   const size = +document.getElementById('dataSize').value;
   document.getElementById('benchBtn').disabled = true;
+
   showLoading('Running benchmark...', 'Comparing distributed vs single machine');
   log(`Benchmarking: ${task}, n=${size.toLocaleString()}`, 'info');
 
   try {
-    const res  = await fetch(`${API}/benchmark?n=${size}&task=${task}`);
+    const res = await fetch(`${API}/benchmark?n=${size}&task=${task}`);
     const data = await res.json();
     hideLoading();
 
     showStats(data.distributed_s, data.single_s, data.speedup, data.workers_used);
-    drawPerfChart(data.distributed_s, data.single_s);
+    drawPerfChart(data.single_s, data.distributed_s);
     log(`Benchmark: distributed=${data.distributed_s}s | single=${data.single_s}s | speedup=${data.speedup}x`, 'success');
     if (data.note) log(`Note: ${data.note}`, 'warn');
 
@@ -785,19 +802,6 @@ async function runBenchmark() {
   }
 }
 
-async function runBenchmarkQuiet(task, size, taskData) {
-  try {
-    const res  = await fetch(`${API}/benchmark?n=${size}&task=${task}`);
-    const data = await res.json();
-    showStats(data.distributed_s, data.single_s, data.speedup, taskData.workers_used);
-    drawPerfChart(data.distributed_s, data.single_s);
-  } catch (e) {
-    // fallback: just show task timing
-    showStats(taskData.total_time, '—', '—', taskData.workers_used);
-  }
-}
-
-// ── Fault tolerance demo ──────────────────────────────────────────────────
 async function demoFaultTolerance() {
   const btn = document.getElementById('faultBtn');
   btn.disabled = true;
@@ -808,18 +812,23 @@ async function demoFaultTolerance() {
   try {
     const task = document.getElementById('taskType').value;
     const size = +document.getElementById('dataSize').value;
-    const res  = await fetch(`${API}/demo/fault?task=${task}&n=${size}`);
+    const res = await fetch(`${API}/demo/fault?task=${task}&n=${size}`);
     const data = await res.json();
     hideLoading();
 
     if (data.fault_occurred && data.recovered) {
-      showAlert('recovery',
-        `✨ DEMO SUCCESS — ${data.demo_failed_node} was marked failed. ` +
-        `Its chunk was auto-redistributed to surviving workers. Task completed!`
+      showAlert(
+        'recovery',
+        `✨ DEMO SUCCESS — ${data.demo_failed_node} was marked failed. Its chunk was auto-redistributed to surviving workers.`
       );
       log(`Auto-recovery triggered — chunk from ${data.demo_failed_node} redistributed`, 'success');
+    } else if (data.error) {
+      showAlert('fault', data.error);
+      log(`Demo error: ${data.error}`, 'error');
     }
 
+    showStats(data.total_time ?? '—', '—', '—', data.workers_used ?? '—');
+    drawPerfChart(null, data.total_time ?? 0);
     renderNodeTable(data.per_node);
     refreshWorkers();
 
@@ -831,117 +840,153 @@ async function demoFaultTolerance() {
   }
 }
 
-// ── UI helpers ────────────────────────────────────────────────────────────
 function showStats(dist, single, speedup, workers) {
-  document.getElementById('statsGrid').style.display  = 'grid';
-  document.getElementById('chartsRow').style.display  = 'grid';
-  document.getElementById('statDistTime').textContent  = typeof dist   === 'number' ? dist.toFixed(4)   : dist;
-  document.getElementById('statSingleTime').textContent= typeof single === 'number' ? single.toFixed(4) : single;
-  document.getElementById('statSpeedup').textContent   = typeof speedup=== 'number' ? speedup + 'x'     : speedup;
-  document.getElementById('statWorkers').textContent   = workers;
+  document.getElementById('statsGrid').style.display = 'grid';
+  document.getElementById('chartsRow').style.display = 'grid';
+  document.getElementById('statDistTime').textContent = typeof dist === 'number' ? dist.toFixed(4) : dist;
+  document.getElementById('statSingleTime').textContent = typeof single === 'number' ? single.toFixed(4) : single;
+  document.getElementById('statSpeedup').textContent = typeof speedup === 'number' ? speedup + 'x' : speedup;
+  document.getElementById('statWorkers').textContent = workers;
 }
 
 function renderNodeTable(perNode) {
-  if (!perNode || !Object.keys(perNode).length) return;
+  if (!perNode || !Object.keys(perNode).length) {
+    document.getElementById('nodePanel').style.display = 'none';
+    if (nodeChart) {
+      nodeChart.destroy();
+      nodeChart = null;
+    }
+    return;
+  }
+
   document.getElementById('nodePanel').style.display = 'block';
   const tbody = document.getElementById('nodeTableBody');
   tbody.innerHTML = '';
 
   Object.entries(perNode).forEach(([node, r]) => {
-    const items  = r.items_in ?? (Array.isArray(r.result) ? r.result.length : '—');
+    const items = r.items_in ?? (Array.isArray(r.result) ? r.result.length : '—');
     const status = r.status === 'done'
       ? '<span style="color:var(--green)">✅ done</span>'
-      : `<span style="color:var(--red)">❌ ${r.status}</span>`;
+      : `<span style="color:var(--red)">❌ ${r.status ?? 'error'}</span>`;
     const anomaly = r.anomaly ? ' ⚠' : '';
+
     tbody.innerHTML += `
       <tr>
         <td style="font-family:var(--font-mono)">${node}${anomaly}</td>
+        <td>${r.mode ?? '—'}</td>
         <td>${typeof items === 'number' ? items.toLocaleString() : items}</td>
         <td style="font-family:var(--font-mono)">${r.time_taken ?? '—'}</td>
-        <td>${r.cpu_before != null ? r.cpu_before.toFixed(1)+'%' : '—'}</td>
-        <td>${r.cpu_after  != null ? r.cpu_after.toFixed(1)+'%'  : '—'}</td>
-        <td>${r.ram_after  != null ? r.ram_after.toFixed(1)+'%'  : '—'}</td>
+        <td>${r.cpu_before != null ? r.cpu_before.toFixed(1) + '%' : '—'}</td>
+        <td>${r.cpu_after != null ? r.cpu_after.toFixed(1) + '%' : '—'}</td>
+        <td>${r.ram_after != null ? r.ram_after.toFixed(1) + '%' : '—'}</td>
         <td>${status}</td>
       </tr>
     `;
-    drawNodeChart(perNode);
   });
+
+  drawNodeChart(perNode);
 }
 
-function drawPerfChart(dist, single) {
+function drawPerfChart(single, dist) {
   const ctx = document.getElementById('perfChart').getContext('2d');
   if (perfChart) perfChart.destroy();
+
+  const values = [
+    typeof single === 'number' ? single : 0,
+    typeof dist === 'number' ? dist : 0
+  ];
+
   perfChart = new Chart(ctx, {
     type: 'bar',
     data: {
       labels: ['Single Machine', 'EduGrid Distributed'],
       datasets: [{
-        data: [single, dist],
+        data: values,
         backgroundColor: ['rgba(100,116,139,0.6)', 'rgba(0,212,255,0.6)'],
-        borderColor:     ['rgba(100,116,139,1)',   'rgba(0,212,255,1)'],
-        borderWidth: 2, borderRadius: 8,
+        borderColor: ['rgba(100,116,139,1)', 'rgba(0,212,255,1)'],
+        borderWidth: 2,
+        borderRadius: 8
       }]
     },
     options: {
-      responsive: true, maintainAspectRatio: false,
+      responsive: true,
+      maintainAspectRatio: false,
       plugins: { legend: { display: false } },
       scales: {
-        x: { grid: { color: '#1e2d45' }, ticks: { color: '#64748b' } },
-        y: { grid: { color: '#1e2d45' }, ticks: { color: '#64748b' },
-             title: { display: true, text: 'Time (s)', color: '#64748b' } }
+        x: {
+          grid: { color: '#1e2d45' },
+          ticks: { color: '#64748b' }
+        },
+        y: {
+          beginAtZero: true,
+          grid: { color: '#1e2d45' },
+          ticks: { color: '#64748b' },
+          title: { display: true, text: 'Time (s)', color: '#64748b' }
+        }
       }
     }
   });
 }
 
 function drawNodeChart(perNode) {
-  const labels = Object.keys(perNode);
-  const times  = labels.map(k => perNode[k].time_taken ?? 0);
+  const labels = Object.keys(perNode || {});
+  const times = labels.map(k => Number(perNode[k]?.time_taken ?? 0));
+
   const ctx = document.getElementById('nodeChart').getContext('2d');
   if (nodeChart) nodeChart.destroy();
+
   nodeChart = new Chart(ctx, {
     type: 'bar',
     data: {
       labels,
       datasets: [{
         data: times,
-        backgroundColor: ['rgba(0,212,255,0.6)','rgba(124,58,237,0.6)','rgba(16,185,129,0.6)'],
-        borderColor:     ['rgba(0,212,255,1)',   'rgba(124,58,237,1)',  'rgba(16,185,129,1)'],
-        borderWidth: 2, borderRadius: 8,
+        backgroundColor: ['rgba(0,212,255,0.6)', 'rgba(124,58,237,0.6)', 'rgba(16,185,129,0.6)', 'rgba(245,158,11,0.6)'],
+        borderColor: ['rgba(0,212,255,1)', 'rgba(124,58,237,1)', 'rgba(16,185,129,1)', 'rgba(245,158,11,1)'],
+        borderWidth: 2,
+        borderRadius: 8
       }]
     },
     options: {
-      responsive: true, maintainAspectRatio: false,
+      responsive: true,
+      maintainAspectRatio: false,
       plugins: { legend: { display: false } },
       scales: {
-        x: { grid: { color: '#1e2d45' }, ticks: { color: '#64748b' } },
-        y: { grid: { color: '#1e2d45' }, ticks: { color: '#64748b' },
-             title: { display: true, text: 'Time (s)', color: '#64748b' } }
+        x: {
+          grid: { color: '#1e2d45' },
+          ticks: { color: '#64748b' }
+        },
+        y: {
+          beginAtZero: true,
+          grid: { color: '#1e2d45' },
+          ticks: { color: '#64748b' },
+          title: { display: true, text: 'Time (s)', color: '#64748b' }
+        }
       }
     }
   });
 }
 
 function showAlert(type, msg) {
-  if (type === 'recovery') {
-    const el = document.getElementById('alertRecovery');
-    document.getElementById('alertRecoveryMsg').textContent = msg;
-    el.classList.add('show');
-  } else {
-    const el = document.getElementById('alertFault');
+  hideAlerts();
+  if (type === 'fault') {
     document.getElementById('alertFaultMsg').textContent = msg;
-    el.classList.add('show');
+    document.getElementById('alertFault').classList.add('show');
+  } else {
+    document.getElementById('alertRecoveryMsg').textContent = msg;
+    document.getElementById('alertRecovery').classList.add('show');
   }
 }
+
 function hideAlerts() {
-  document.getElementById('alertRecovery').classList.remove('show');
   document.getElementById('alertFault').classList.remove('show');
+  document.getElementById('alertRecovery').classList.remove('show');
 }
 
-// ── Auto-poll workers every 4s ────────────────────────────────────────────
 refreshWorkers();
+toggleModeFields();
 setInterval(refreshWorkers, 4000);
-toggleGpuFields();
 </script>
+
 </body>
 </html>
