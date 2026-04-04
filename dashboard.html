@@ -195,11 +195,11 @@
   }
 
   .controls-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr auto;
-    gap: 16px;
-    align-items: end;
-  }
+      display: grid;
+      grid-template-columns: 1.2fr 1fr 0.8fr 1fr auto;
+      gap: 16px;
+      align-items: end;
+    }
 
   .form-group label {
     display: block;
@@ -453,21 +453,51 @@
           <option value="filter_odd">Filter Odd — Distributed filter</option>
           <option value="normalize">Normalize — Min-max scaling</option>
         </select>
-      </div>
-      <div class="form-group">
-        <label>DATASET SIZE</label>
-        <div class="slider-wrap">
-          <span class="slider-value" id="sliderVal">10,000</span>
-          <input type="range" id="dataSize"
-            min="1000" max="50000" step="1000" value="10000"
-            oninput="document.getElementById('sliderVal').textContent = (+this.value).toLocaleString()"
-          />
-        </div>
-      </div>
-      <button class="btn btn-primary" id="runBtn" onclick="runTask()">
-        ▶ Run Task
-      </button>
+  </div>
+
+  <div class="form-group">
+    <label>DATASET SIZE</label>
+      <div class="slider-wrap">
+        <span class="slider-value" id="sliderVal">10,000</span>
+        <input type="range" id="dataSize"
+          min="1000" max="50000" step="1000" value="10000"
+          oninput="document.getElementById('sliderVal').textContent = (+this.value).toLocaleString()"
+        />
     </div>
+  </div>
+
+  <div class="form-group">
+    <label>GPU REQUIRED</label>
+    <select id="gpuRequired" onchange="toggleGpuFields()">
+      <option value="false">No</option>
+      <option value="true">Yes</option>
+    </select>
+  </div>
+
+  <div class="form-group">
+    <label>MIN VRAM / RAM (GB)</label>
+    <div style="display:flex; gap:10px;">
+      <select id="minVramGb">
+        <option value="0">VRAM 0</option>
+        <option value="2">VRAM 2</option>
+        <option value="4">VRAM 4</option>
+        <option value="6">VRAM 6</option>
+        <option value="8">VRAM 8</option>
+      </select>
+      <select id="minRamGb">
+        <option value="0">RAM 0</option>
+        <option value="2">RAM 2</option>
+        <option value="4">RAM 4</option>
+        <option value="8">RAM 8</option>
+        <option value="16">RAM 16</option>
+      </select>
+    </div>
+  </div>
+
+  <button class="btn btn-primary" id="runBtn" onclick="runTask()">
+    ▶ Run Task
+  </button>
+</div>
 
     <div class="demo-row">
       <button class="btn btn-danger" onclick="runBenchmark()" id="benchBtn">
@@ -596,12 +626,20 @@ function renderWorkers(workers) {
     const cpuDanger  = w.cpu > 80;
     const ramDanger  = w.ram > 80;
 
+    const gpuAvailable = w.gpu_available ? 'YES' : 'NO';
+    const gpuName = w.gpu_name || 'No GPU';
+    const vramFree = w.vram_free_gb ?? 0;
+    const ramFree = w.ram_free_gb ?? 0;
+    const gpuUtil = w.gpu_utilization ?? 0;
+    const gpuDanger = gpuUtil > 80;
+
     grid.innerHTML += `
       <div class="${cardClass}">
         <div class="worker-header">
           <span class="worker-name">${w.node || w.port}</span>
           <span class="status-pill ${isOffline ? 'offline' : isAnomaly ? 'anomaly' : isBusy ? 'busy' : 'online'}">${statusText}</span>
         </div>
+
         <div class="metric-row">
           <div class="metric-item">
             <div class="metric-label">CPU</div>
@@ -614,7 +652,29 @@ function renderWorkers(workers) {
             <div class="metric-value">${w.ram?.toFixed(1) ?? 0}%</div>
           </div>
         </div>
-        <div class="worker-tasks">Tasks done: ${w.total_tasks_done ?? 0} &nbsp;|&nbsp; Port: ${w.port}</div>
+
+        <div class="metric-row">
+          <div class="metric-item">
+            <div class="metric-label">GPU UTIL</div>
+            <div class="metric-bar"><div class="metric-fill ${gpuDanger ? 'danger' : ''}" style="width:${gpuUtil}%"></div></div>
+            <div class="metric-value">${gpuUtil?.toFixed(1) ?? 0}%</div>
+          </div>
+          <div class="metric-item">
+            <div class="metric-label">GPU</div>
+            <div class="metric-value">${gpuAvailable}</div>
+          </div>
+        </div>
+
+        <div class="worker-tasks">
+          Tasks done: ${w.total_tasks_done ?? 0} &nbsp;|&nbsp; Port: ${w.port}
+        </div>
+        <div class="worker-tasks">
+          RAM Free: ${ramFree} GB &nbsp;|&nbsp; VRAM Free: ${vramFree} GB
+        </div>
+        <div class="worker-tasks">
+          GPU: ${gpuName}
+        </div>
+
         <div class="anomaly-warning">⚠ CPU spike detected — load reduced</div>
       </div>
     `;
@@ -630,31 +690,50 @@ function showLoading(text = 'Distributing task...', sub = 'Sending chunks to wor
 function hideLoading() {
   document.getElementById('loadingOverlay').classList.remove('show');
 }
-
+function toggleGpuFields() {
+  const gpuRequired = document.getElementById('gpuRequired').value === 'true';
+  document.getElementById('minVramGb').disabled = !gpuRequired;
+}
 // ── Run task ──────────────────────────────────────────────────────────────
 async function runTask() {
   const task = document.getElementById('taskType').value;
   const size = +document.getElementById('dataSize').value;
+  const gpuRequired = document.getElementById('gpuRequired').value === 'true';
+  const minVramGb = +document.getElementById('minVramGb').value;
+  const minRamGb = +document.getElementById('minRamGb').value;
   const btn  = document.getElementById('runBtn');
 
   btn.disabled = true;
   showLoading('Distributing task...', `${size.toLocaleString()} items → parallel workers`);
   hideAlerts();
-  log(`Running task: ${task} on ${size.toLocaleString()} items`, 'info');
+  log(
+  `Running task: ${task} on ${size.toLocaleString()} items | GPU=${gpuRequired} | VRAM>=${minVramGb}GB | RAM>=${minRamGb}GB`,
+  'info'
+);
 
   try {
-    const res  = await fetch(`${API}/run`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ task, size }),
-    });
+   const res  = await fetch(`${API}/run`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+    task,
+    size,
+    gpu_required: gpuRequired,
+    min_vram_gb: minVramGb,
+    min_ram_gb: minRamGb
+  })
+});
     const data = await res.json();
     hideLoading();
 
     if (data.error) {
-      log(`Error: ${data.error}`, 'error');
-      return;
-    }
+        log(
+          `Error: ${data.error} | GPU=${data.gpu_required} | VRAM>=${data.min_vram_gb}GB | RAM>=${data.min_ram_gb}GB`,
+          'error'
+        );
+        showAlert('fault', 'No eligible node available for the requested resources.');
+        return;
+      }
 
     // Fault + recovery alerts
     if (data.fault_occurred && data.recovered) {
@@ -862,6 +941,7 @@ function hideAlerts() {
 // ── Auto-poll workers every 4s ────────────────────────────────────────────
 refreshWorkers();
 setInterval(refreshWorkers, 4000);
+toggleGpuFields();
 </script>
 </body>
 </html>

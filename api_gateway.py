@@ -36,10 +36,13 @@ app.add_middleware(
 
 # ── Request schema ─────────────────────────────────────────────────────────
 class TaskRequest(BaseModel):
-    data:     Optional[List[Any]] = None
-    task:     str                 = "sort"
-    size:     Optional[int]       = None     # generate random data of this size
-
+    data:          Optional[List[Any]] = None
+    task:          str                 = "sort"
+    size:          Optional[int]       = None
+    gpu_required:  bool                = False
+    min_vram_gb:   float               = 0
+    min_ram_gb:    float               = 0
+    priority:      str                 = "normal"
 
 # ══════════════════════════════════════════════════════════════════════════
 # GET /workers — live status of all nodes
@@ -62,9 +65,15 @@ def list_workers():
                 "status":           "offline",
                 "cpu":              0,
                 "ram":              0,
+                "ram_free_gb":      0,
+                "ram_total_gb":     0,
+                "gpu_available":    False,
+                "gpu_name":         None,
+                "vram_total_gb":    0,
+                "vram_free_gb":     0,
+                "gpu_utilization":  0,
                 "anomaly":          False,
-                "total_tasks_done": 0,
-            })
+                "total_tasks_done": 0,})
     return {"workers": results}
 
 
@@ -81,7 +90,7 @@ def run_task(req: TaskRequest):
     else:
         raise HTTPException(400, "Provide either 'data' or 'size'")
 
-    result = distribute_task(data, task=req.task)
+    result = distribute_task(data,task=req.task, gpu_required=req.gpu_required,min_vram_gb=req.min_vram_gb,min_ram_gb=req.min_ram_gb,)
     return result
 
 
@@ -95,7 +104,13 @@ def benchmark(n: int = 5000, task: str = "sort"):
 
     # ── Distributed ────────────────────────────────────────────────────
     dist_start  = time.perf_counter()
-    dist_result = distribute_task(data, task=task)
+    dist_result = distribute_task(
+                data,
+                task=task,
+                gpu_required=False,
+                min_vram_gb=0,
+                min_ram_gb=0,
+            )
     dist_time   = round(time.perf_counter() - dist_start, 4)
 
     # ── Single machine (same process, no parallelism) ──────────────────
@@ -163,7 +178,7 @@ def demo_fault(task: str = "sort", n: int = 5000):
     """
     data = list(range(n, 0, -1))
 
-    workers = get_available_workers()
+    workers = get_available_workers(False, 0, 0)
     if len(workers) < 2:
         raise HTTPException(400, "Need at least 2 workers for fault demo")
 
@@ -182,7 +197,13 @@ def demo_fault(task: str = "sort", n: int = 5000):
         pass
 
     # Now run the real task — master's fault tolerance handles it
-    result = distribute_task(data, task=task)
+    result = distribute_task(
+            data,
+            task=task,
+            gpu_required=False,
+            min_vram_gb=0,
+            min_ram_gb=0,
+        )
     result["demo_failed_node"] = bad_worker["node"]
     return result
 
@@ -192,7 +213,7 @@ def demo_fault(task: str = "sort", n: int = 5000):
 # ══════════════════════════════════════════════════════════════════════════
 @app.get("/health")
 def health():
-    workers   = get_available_workers()
+    workers = get_available_workers(False, 0, 0)
     all_ports = [w.split(":")[-1] for w in WORKERS]
     up_ports  = [w["url"].split(":")[-1] for w in workers]
     down      = [p for p in all_ports if p not in up_ports]
