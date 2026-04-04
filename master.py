@@ -146,16 +146,23 @@ def distribute_task(data, task="sort"):
                    if r.get("status") == "done"]
 
     if task == "sort":
-        # Each chunk was already sorted — merge them
         import heapq
-        final_result = list(heapq.merge(*all_results))
+        sorted_chunks = [sorted(chunk) for chunk in all_results]
+        final_result = list(heapq.merge(*sorted_chunks))
+
     elif task == "sum":
-        final_result = sum(all_results)
-    else:
-        # flatten: [[a,b],[c,d]] → [a,b,c,d]
+        final_result = sum(
+            r if isinstance(r, (int, float)) else sum(r)
+            for r in all_results
+        )
+
+    elif task in ("square", "filter_even"):
         final_result = [item for sublist in all_results for item in sublist]
 
-    print(f"\n  [MASTER] Completed in {total_time}s  →  {str(final_result)[:80]}")
+    else:
+        final_result = [item for sublist in all_results for item in sublist]
+
+    print(f"\n  [MASTER] Completed in {total_time}s → {str(final_result)[:80]}")
     print(f"{'─'*50}\n")
 
     return {
@@ -166,7 +173,6 @@ def distribute_task(data, task="sort"):
         "result":       final_result,
         "per_node":     results_by_node,
     }
-
 
 # ══════════════════════════════════════════════════════════════════════════
 # Demo — run standalone to test
@@ -187,5 +193,13 @@ if __name__ == "__main__":
     print("\n🧪 Test 2: Distributed SUM")
     out2 = distribute_task(test_data, task="sum")
     single_sum = sum(test_data)
+    print("\n🧪 Test 3: Distributed SQUARE")
+    out3 = distribute_task(test_data, task="square")
+    print(f"First 5 squares: {out3['result'][:5]}")
+
+    print("\n🧪 Test 4: Distributed FILTER EVEN")
+    out4 = distribute_task(test_data, task="filter_even")
+    print(f"Filtered even count: {len(out4['result'])}")
+    print(f"Even numbers count: {len(out5['result'])}")
     print(f"Distributed sum: {out2['result']} | Single machine: {single_sum}")
     print(f"Match: {out2['result'] == single_sum}")
