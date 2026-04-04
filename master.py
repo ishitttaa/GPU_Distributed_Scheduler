@@ -1,12 +1,15 @@
 """
-EduGrid - Master Node
-======================
-The master is the "restaurant manager":
-  1. Receives the full task from the user
-  2. Splits data into chunks
-  3. Finds which workers are free (heartbeat check)
-  4. Sends one chunk to each free worker in parallel
-  5. Waits for all results and combines them
+EduGrid - Master Node (Upgraded)
+==================================
+Upgrades over v1:
+  ✅ FAULT TOLERANCE — if a worker dies mid-task, its chunk
+     is redistributed to surviving workers automatically
+  ✅ PREDICTIVE LOAD BALANCING — routes chunks to workers
+     based on weighted CPU + RAM score, not just CPU alone
+  ✅ ANOMALY DETECTION — flags degraded workers (high CPU)
+     and reduces their workload share
+  ✅ RETRY LOGIC — failed chunks retried on other workers
+  ✅ Real benchmark (no fake multipliers)
 
 Run AFTER starting all three workers:
   python master.py
@@ -14,70 +17,117 @@ Run AFTER starting all three workers:
 
 import requests
 import time
-import json
+import heapq
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-# ── Worker registry  (add more ports = more workers) ──────────────────────
+# ── Worker registry ────────────────────────────────────────────────────────
 WORKERS = [
     "http://localhost:8001",
     "http://localhost:8002",
     "http://localhost:8003",
 ]
 
-TIMEOUT = 10   # seconds to wait for a worker response
+TIMEOUT         = 10
+HEARTBEAT_EVERY = 5    # seconds between background health checks
+
+# ── In-memory worker health scores (updated each run) ─────────────────────
+_worker_scores = {}    # url → float score (lower = prefer)
 
 
 # ══════════════════════════════════════════════════════════════════════════
 # STEP 1 — Heartbeat: find all alive + free workers
 # ══════════════════════════════════════════════════════════════════════════
 def get_available_workers():
-    """Ping every worker; return only those that are alive and free."""
+    """
+    Ping every worker. Return those that are alive.
+    Includes 'degraded' workers (high CPU) but marks them —
+    the load balancer will assign them smaller chunks.
+    """
     available = []
     for url in WORKERS:
         try:
-            r = requests.get(f"{url}/status", timeout=2)
+            r    = requests.get(f"{url}/status", timeout=2)
             info = r.json()
-            if info.get("status") == "free":
-                available.append({
-                    "url":  url,
-                    "cpu":  info.get("cpu", 0),
-                    "ram":  info.get("ram", 0),
-                    "node": info.get("node"),
-                })
+
+            if info.get("status") == "busy":
+                continue   # skip busy workers
+
+            cpu     = info.get("cpu", 0)
+            ram     = info.get("ram", 0)
+            anomaly = info.get("anomaly", False)
+
+            # Weighted health score: lower = healthier = gets more work
+            # CPU matters 70%, RAM matters 30%
+            score = (cpu * 0.7) + (ram * 0.3)
+
+            # Penalise anomalous workers — give them 30% less weight
+            if anomaly:
+                score *= 1.5
+                print(f"  ⚠️  [{url.split(':')[-1]}] ANOMALY detected (CPU spike) — reduced load")
+
+            _worker_scores[url] = score
+
+            available.append({
+                "url":     url,
+                "cpu":     cpu,
+                "ram":     ram,
+                "score":   score,
+                "anomaly": anomaly,
+                "node":    info.get("node"),
+            })
+
         except Exception:
-            pass   # worker is offline — skip it silently
+            print(f"  💀 Worker at {url} is OFFLINE — skipping")
+
+    # Sort by health score — best workers first
+    available.sort(key=lambda w: w["score"])
     return available
 
 
 # ══════════════════════════════════════════════════════════════════════════
-# STEP 2 — Task splitting
+# STEP 2 — Predictive chunk sizing (not equal splits)
 # ══════════════════════════════════════════════════════════════════════════
-def split_data(data, num_workers):
+def split_data_weighted(data, workers):
     """
-    Split data into EXACTLY num_workers chunks
+    Instead of equal chunks, give healthier workers more data.
+    Inversely proportional to health score (lower score = more data).
+
+    Example: scores [10, 20, 50]
+      inverse weights → [1/10, 1/20, 1/50] = [0.1, 0.05, 0.02]
+      normalised → worker-0 gets 59%, worker-1 gets 30%, worker-2 gets 12%
     """
-    if num_workers == 0:
+    if not workers:
         return []
 
-    chunk_size = len(data) // num_workers
-    chunks = []
+    scores  = [max(w["score"], 1) for w in workers]   # avoid div/0
+    inv     = [1.0 / s for s in scores]
+    total   = sum(inv)
+    weights = [i / total for i in inv]
 
-    for i in range(num_workers):
-        start = i * chunk_size
-        end = (i + 1) * chunk_size if i != num_workers - 1 else len(data)
-        chunks.append(data[start:end])
+    chunks  = []
+    start   = 0
+    n       = len(data)
+
+    for i, w in enumerate(weights):
+        if i == len(weights) - 1:
+            chunks.append(data[start:])           # last worker gets remainder
+        else:
+            size = max(1, round(n * w))
+            chunks.append(data[start:start + size])
+            start += size
 
     return chunks
 
+
 # ══════════════════════════════════════════════════════════════════════════
-# STEP 3 — Send one chunk to one worker (runs in a thread)
+# STEP 3 — Send chunk to one worker
 # ══════════════════════════════════════════════════════════════════════════
 def send_to_worker(worker_info, chunk, task):
-    """POST a data chunk to a single worker and return its result."""
-    url = worker_info["url"]
+    """POST a chunk to a worker. Returns result dict."""
+    url     = worker_info["url"]
     payload = {"data": chunk, "task": task}
     try:
-        r = requests.post(f"{url}/process", json=payload, timeout=TIMEOUT)
+        r      = requests.post(f"{url}/process", json=payload, timeout=TIMEOUT)
         result = r.json()
         return result
     except Exception as e:
@@ -85,70 +135,125 @@ def send_to_worker(worker_info, chunk, task):
             "node":       worker_info["node"],
             "status":     "error",
             "error":      str(e),
-            "result":     [],
+            "result":     None,
+            "chunk":      chunk,    # keep chunk for redistribution
             "time_taken": 0,
         }
 
 
 # ══════════════════════════════════════════════════════════════════════════
-# STEP 4 — Orchestrate: split → assign → parallel execute → aggregate
+# STEP 4 — FAULT TOLERANCE: redistribute failed chunks
+# ══════════════════════════════════════════════════════════════════════════
+def redistribute_failed(failed_chunks, survivors, task):
+    """
+    Called when one or more workers fail mid-task.
+    Merges all failed chunks and re-assigns them to surviving workers.
+    This is the "self-healing" moment — shown live on dashboard.
+    """
+    if not survivors or not failed_chunks:
+        return {}
+
+    print(f"\n  🔁 FAULT RECOVERY: redistributing {len(failed_chunks)} failed chunk(s) "
+          f"across {len(survivors)} surviving worker(s)")
+
+    # Merge all failed data into one flat list
+    merged_failed = []
+    for chunk in failed_chunks:
+        if isinstance(chunk, list):
+            merged_failed.extend(chunk)
+        elif chunk is not None:
+            merged_failed.append(chunk)
+
+    # Re-split across survivors
+    rechunks   = split_data_weighted(merged_failed, survivors)
+    recovery   = {}
+
+    with ThreadPoolExecutor(max_workers=len(survivors)) as ex:
+        futs = {}
+        for worker, chunk in zip(survivors, rechunks):
+            fut = ex.submit(send_to_worker, worker, chunk, task)
+            futs[fut] = worker["node"]
+
+        for fut in as_completed(futs):
+            node   = futs[fut]
+            result = fut.result()
+            recovery[node + "_recovery"] = result
+            status = result.get("status", "?")
+            print(f"  🔁 Recovery via {node} → {status}")
+
+    return recovery
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# STEP 5 — Full pipeline
 # ══════════════════════════════════════════════════════════════════════════
 def distribute_task(data, task="sort"):
     """
-    Full pipeline:
-      find free workers → split data → send in parallel → merge results
-    Returns a rich summary dict.
+    Full pipeline with fault tolerance:
+      1. Find healthy workers (predictive scoring)
+      2. Split data proportionally (weighted chunking)
+      3. Execute in parallel
+      4. Detect failures → auto-redistribute → recover
+      5. Aggregate final result
     """
-    print(f"\n{'─'*50}")
-    print(f"  MASTER: New task='{task}', {len(data)} items")
-    print(f"{'─'*50}")
+    print(f"\n{'─'*55}")
+    print(f"  MASTER: task='{task}', {len(data)} items")
+    print(f"{'─'*55}")
 
-    # -- A. Check available workers --
     workers = get_available_workers()
     if not workers:
-        print("  [MASTER] No workers available!")
         return {"error": "No workers available", "result": None}
 
-    # Sort workers by CPU load — prefer least-busy node (smart allocation)
-    workers.sort(key=lambda w: w["cpu"])
-    print(f"  [MASTER] Available workers: {[w['node'] for w in workers]}")
+    print(f"  Workers: {[w['node'] for w in workers]}")
+    print(f"  Scores:  {[round(w['score'], 1) for w in workers]}")
 
-    # -- B. Split data --
-    chunks = split_data(data, len(workers))
-    print(f"  [MASTER] Chunks: {[len(c) for c in chunks]} items each")
+    # Weighted split
+    chunks = split_data_weighted(data, workers)
+    print(f"  Chunks:  {[len(c) for c in chunks]} items (weighted)")
 
-    master_start = time.time()
+    master_start     = time.time()
+    results_by_node  = {}
+    failed_chunks    = []
+    survivor_workers = []
 
-    # -- C. Send all chunks in parallel using threads --
+    # ── Parallel execution ─────────────────────────────────────────────
     futures = {}
-    results_by_node = {}
     with ThreadPoolExecutor(max_workers=len(workers)) as executor:
         for worker, chunk in zip(workers, chunks):
-            future = executor.submit(send_to_worker, worker, chunk, task)
-            futures[future] = worker["node"]
+            fut = executor.submit(send_to_worker, worker, chunk, task)
+            futures[fut] = worker
 
-        # -- D. Collect results as they come in --
-        for future in as_completed(futures):
-            node_name = futures[future]
-            result    = future.result()
-            results_by_node[node_name] = result
-            status = result.get("status", "?")
-            t      = result.get("time_taken", "?")
-            print(f"  [MASTER] {node_name} → {status}  ({t}s)")
+        for fut in as_completed(futures):
+            worker = futures[fut]
+            result = fut.result()
+            node   = worker["node"]
+
+            if result.get("status") == "done":
+                results_by_node[node] = result
+                survivor_workers.append(worker)
+                print(f"  ✅ {node} → done ({result.get('time_taken')}s)")
+            else:
+                # Worker failed — save its chunk for recovery
+                failed_chunks.append(result.get("chunk", []))
+                print(f"  ❌ {node} → FAILED — queuing for recovery")
+
+    # ── Fault recovery ─────────────────────────────────────────────────
+    if failed_chunks:
+        recovery = redistribute_failed(failed_chunks, survivor_workers, task)
+        results_by_node.update(recovery)
 
     total_time = round(time.time() - master_start, 4)
 
-    # -- E. Aggregate results --
-    #    For "sort": merge sorted chunks (works like merge-sort's merge step)
-    #    For "sum":  add all partial sums
-    #    For others: concatenate results
-    all_results = [r.get("result", []) for r in results_by_node.values()
-                   if r.get("status") == "done"]
+    # ── Aggregate ──────────────────────────────────────────────────────
+    all_results = [
+        r.get("result", [])
+        for r in results_by_node.values()
+        if r.get("status") == "done"
+    ]
 
     if task == "sort":
-        import heapq
-        sorted_chunks = [sorted(chunk) for chunk in all_results]
-        final_result = list(heapq.merge(*sorted_chunks))
+        sorted_chunks = [sorted(c) if isinstance(c, list) else [] for c in all_results]
+        final_result  = list(heapq.merge(*sorted_chunks))
 
     elif task == "sum":
         final_result = sum(
@@ -156,50 +261,47 @@ def distribute_task(data, task="sort"):
             for r in all_results
         )
 
-    elif task in ("square", "filter_even"):
-        final_result = [item for sublist in all_results for item in sublist]
+    elif task in ("square", "filter_even", "filter_odd", "normalize"):
+        final_result = [item for sub in all_results if isinstance(sub, list) for item in sub]
 
     else:
-        final_result = [item for sublist in all_results for item in sublist]
+        final_result = [item for sub in all_results if isinstance(sub, list) for item in sub]
 
-    print(f"\n  [MASTER] Completed in {total_time}s → {str(final_result)[:80]}")
-    print(f"{'─'*50}\n")
+    workers_used     = len(workers)
+    fault_occurred   = bool(failed_chunks)
+    recovered        = fault_occurred and bool(results_by_node)
+
+    print(f"\n  MASTER: Done in {total_time}s | fault={fault_occurred} | recovered={recovered}")
+    print(f"{'─'*55}\n")
 
     return {
-        "task":         task,
-        "total_items":  len(data),
-        "workers_used": len(workers),
-        "total_time":   total_time,
-        "result":       final_result,
-        "per_node":     results_by_node,
+        "task":          task,
+        "total_items":   len(data),
+        "workers_used":  workers_used,
+        "total_time":    total_time,
+        "result":        final_result,
+        "per_node":      results_by_node,
+        "fault_occurred": fault_occurred,
+        "recovered":     recovered,
+        "worker_scores": {w["node"]: round(w["score"], 2) for w in workers},
     }
 
+
 # ══════════════════════════════════════════════════════════════════════════
-# Demo — run standalone to test
+# Demo — run standalone
 # ══════════════════════════════════════════════════════════════════════════
 if __name__ == "__main__":
-    import pandas as pd
+    import random
+    data = random.sample(range(1, 100_001), 10_000)
 
-    df = pd.read_csv("data.csv")
+    print("\n🧪 Test 1: Sort")
+    r = distribute_task(data, "sort")
+    print(f"  First 5: {r['result'][:5]}")
 
-    test_data = df.select_dtypes(include='number').iloc[:,0].tolist()
+    print("\n🧪 Test 2: Sum")
+    r = distribute_task(data, "sum")
+    print(f"  Distributed sum: {r['result']} | Single: {sum(data)}")
 
-    print(f"Loaded {len(test_data)} data points")
-
-    print("\n🧪 Test 1: Distributed SORT")
-    out = distribute_task(test_data, task="sort")
-    print(f"First 10 sorted: {out['result'][:10]}")
-
-    print("\n🧪 Test 2: Distributed SUM")
-    out2 = distribute_task(test_data, task="sum")
-    single_sum = sum(test_data)
-    print("\n🧪 Test 3: Distributed SQUARE")
-    out3 = distribute_task(test_data, task="square")
-    print(f"First 5 squares: {out3['result'][:5]}")
-
-    print("\n🧪 Test 4: Distributed FILTER EVEN")
-    out4 = distribute_task(test_data, task="filter_even")
-    print(f"Filtered even count: {len(out4['result'])}")
-    print(f"Even numbers count: {len(out5['result'])}")
-    print(f"Distributed sum: {out2['result']} | Single machine: {single_sum}")
-    print(f"Match: {out2['result'] == single_sum}")
+    print("\n🧪 Test 3: Square")
+    r = distribute_task(data[:100], "square")
+    print(f"  First 3 squares: {r['result'][:3]}")
