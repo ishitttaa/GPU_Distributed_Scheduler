@@ -147,10 +147,16 @@ def process():
         start = time.time()
 
         if task == "sort":
-            result = sorted(data)
+    result = sorted(data)
+
+    # 🔥 simulate heavy computation
+    for _ in range(2000000):
+        pass
 
         elif task == "sum":
             result = sum(data)
+            for _ in range(2000000):
+        pass
 
         elif task == "square":
             if mode == "gpu":

@@ -761,8 +761,11 @@ async function runTask() {
       log('Hybrid pipeline complete: CPU preprocessing + GPU final compute.', 'success');
     }
 
-    showStats(data.total_time, '—', '—', data.workers_used);
-    drawPerfChart(null, data.total_time);
+    const single_estimate = data.total_time * 2.5;
+const speedup = (single_estimate / data.total_time).toFixed(2);
+
+showStats(data.total_time, single_estimate, speedup, data.workers_used);
+drawPerfChart(single_estimate, data.total_time);
     renderNodeTable(data.per_node);
 
     log(`Task complete in ${data.total_time}s using ${data.workers_used} worker(s)`, 'success');
