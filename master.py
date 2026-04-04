@@ -23,8 +23,8 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 # ── Worker registry ────────────────────────────────────────────────────────
 WORKERS = [
     "http://localhost:8001",
-    "http://localhost:8002",
-    "http://localhost:8003",
+    "http://172.16.70.87:8002",
+    "http://172.16.68.38:8003",
 ]
 
 TIMEOUT         = 10
