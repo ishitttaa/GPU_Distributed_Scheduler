@@ -37,7 +37,7 @@ _worker_scores = {}    # url → float score (lower = prefer)
 # ══════════════════════════════════════════════════════════════════════════
 # STEP 1 — Heartbeat: find all alive + free workers
 # ══════════════════════════════════════════════════════════════════════════
-def get_available_workers():
+def get_available_workers(gpu_required=False, min_vram_gb=0, min_ram_gb=0):
     """
     Ping every worker. Return those that are alive.
     Includes 'degraded' workers (high CPU) but marks them —
@@ -50,16 +50,30 @@ def get_available_workers():
             info = r.json()
 
             if info.get("status") == "busy":
-                continue   # skip busy workers
+               continue   # skip busy workers
 
-            cpu     = info.get("cpu", 0)
-            ram     = info.get("ram", 0)
+            cpu = info.get("cpu", 0)
+            ram = info.get("ram", 0)
             anomaly = info.get("anomaly", False)
+            gpu_available = info.get("gpu_available", False)
+            vram_free_gb  = info.get("vram_free_gb", 0)
+            ram_free_gb   = info.get("ram_free_gb", 0)
+
+            if gpu_required and not gpu_available:
+                continue
+
+            if vram_free_gb < min_vram_gb:
+                continue
+
+            if ram_free_gb < min_ram_gb:
+                continue
 
             # Weighted health score: lower = healthier = gets more work
             # CPU matters 70%, RAM matters 30%
-            score = (cpu * 0.7) + (ram * 0.3)
-
+            if gpu_required:
+               score = (cpu * 0.5) + (ram * 0.2) - (vram_free_gb * 5)
+            else:
+               score = (cpu * 0.7) + (ram * 0.3)
             # Penalise anomalous workers — give them 30% less weight
             if anomaly:
                 score *= 1.5
@@ -67,15 +81,8 @@ def get_available_workers():
 
             _worker_scores[url] = score
 
-            available.append({
-                "url":     url,
-                "cpu":     cpu,
-                "ram":     ram,
-                "score":   score,
-                "anomaly": anomaly,
-                "node":    info.get("node"),
-            })
-
+            available.append({"url":           url,"cpu":           cpu,"ram":           ram,"ram_free_gb":   ram_free_gb,"gpu_available": gpu_available,"vram_free_gb":  vram_free_gb,
+                                "score":         score,"anomaly":       anomaly,"node":          info.get("node"),})
         except Exception:
             print(f"  💀 Worker at {url} is OFFLINE — skipping")
 
@@ -122,10 +129,16 @@ def split_data_weighted(data, workers):
 # ══════════════════════════════════════════════════════════════════════════
 # STEP 3 — Send chunk to one worker
 # ══════════════════════════════════════════════════════════════════════════
-def send_to_worker(worker_info, chunk, task):
+def send_to_worker(worker_info, chunk, task, gpu_required=False, min_vram_gb=0, min_ram_gb=0):
     """POST a chunk to a worker. Returns result dict."""
     url     = worker_info["url"]
-    payload = {"data": chunk, "task": task}
+    payload = {
+    "data": chunk,
+    "task": task,
+    "gpu_required": gpu_required,
+    "min_vram_gb": min_vram_gb,
+    "min_ram_gb": min_ram_gb,
+    }
     try:
         r      = requests.post(f"{url}/process", json=payload, timeout=TIMEOUT)
         result = r.json()
@@ -144,7 +157,7 @@ def send_to_worker(worker_info, chunk, task):
 # ══════════════════════════════════════════════════════════════════════════
 # STEP 4 — FAULT TOLERANCE: redistribute failed chunks
 # ══════════════════════════════════════════════════════════════════════════
-def redistribute_failed(failed_chunks, survivors, task):
+def redistribute_failed(failed_chunks, survivors, task, gpu_required=False, min_vram_gb=0, min_ram_gb=0):
     """
     Called when one or more workers fail mid-task.
     Merges all failed chunks and re-assigns them to surviving workers.
@@ -171,7 +184,7 @@ def redistribute_failed(failed_chunks, survivors, task):
     with ThreadPoolExecutor(max_workers=len(survivors)) as ex:
         futs = {}
         for worker, chunk in zip(survivors, rechunks):
-            fut = ex.submit(send_to_worker, worker, chunk, task)
+            fut = ex.submit(send_to_worker,worker,chunk,task,gpu_required,min_vram_gb,min_ram_gb)
             futs[fut] = worker["node"]
 
         for fut in as_completed(futs):
@@ -187,7 +200,7 @@ def redistribute_failed(failed_chunks, survivors, task):
 # ══════════════════════════════════════════════════════════════════════════
 # STEP 5 — Full pipeline
 # ══════════════════════════════════════════════════════════════════════════
-def distribute_task(data, task="sort"):
+def distribute_task(data, task="sort", gpu_required=False, min_vram_gb=0, min_ram_gb=0):
     """
     Full pipeline with fault tolerance:
       1. Find healthy workers (predictive scoring)
@@ -200,9 +213,9 @@ def distribute_task(data, task="sort"):
     print(f"  MASTER: task='{task}', {len(data)} items")
     print(f"{'─'*55}")
 
-    workers = get_available_workers()
+    workers = get_available_workers(gpu_required, min_vram_gb, min_ram_gb)
     if not workers:
-        return {"error": "No workers available", "result": None}
+        return {"error": "No eligible workers available","result": None,"gpu_required": gpu_required,"min_vram_gb": min_vram_gb,"min_ram_gb": min_ram_gb, }
 
     print(f"  Workers: {[w['node'] for w in workers]}")
     print(f"  Scores:  {[round(w['score'], 1) for w in workers]}")
@@ -220,7 +233,7 @@ def distribute_task(data, task="sort"):
     futures = {}
     with ThreadPoolExecutor(max_workers=len(workers)) as executor:
         for worker, chunk in zip(workers, chunks):
-            fut = executor.submit(send_to_worker, worker, chunk, task)
+            fut = executor.submit(send_to_worker,worker,chunk,task,gpu_required,min_vram_gb,min_ram_gb)
             futures[fut] = worker
 
         for fut in as_completed(futures):
@@ -239,7 +252,7 @@ def distribute_task(data, task="sort"):
 
     # ── Fault recovery ─────────────────────────────────────────────────
     if failed_chunks:
-        recovery = redistribute_failed(failed_chunks, survivor_workers, task)
+        recovery = redistribute_failed(failed_chunks,survivor_workers,task,gpu_required,min_vram_gb,min_ram_gb)
         results_by_node.update(recovery)
 
     total_time = round(time.time() - master_start, 4)
@@ -275,16 +288,18 @@ def distribute_task(data, task="sort"):
     print(f"{'─'*55}\n")
 
     return {
-        "task":          task,
-        "total_items":   len(data),
-        "workers_used":  workers_used,
-        "total_time":    total_time,
-        "result":        final_result,
-        "per_node":      results_by_node,
-        "fault_occurred": fault_occurred,
-        "recovered":     recovered,
-        "worker_scores": {w["node"]: round(w["score"], 2) for w in workers},
-    }
+       "task":          task,
+       "total_items":   len(data),
+       "workers_used":  workers_used,
+       "total_time":    total_time,
+       "result":        final_result,
+       "per_node":      results_by_node,
+       "fault_occurred": fault_occurred,
+       "recovered":     recovered,
+       "worker_scores": {w["node"]: round(w["score"], 2) for w in workers},
+       "gpu_required":  gpu_required,
+       "min_vram_gb":   min_vram_gb,
+      "min_ram_gb":    min_ram_gb,}
 
 
 # ══════════════════════════════════════════════════════════════════════════

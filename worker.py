@@ -19,6 +19,10 @@ import time
 import sys
 import psutil
 import collections
+try:
+    import GPUtil
+except ImportError:
+    GPUtil=None
 
 app = Flask(__name__)
 
@@ -32,26 +36,76 @@ CPU_ANOMALY_THRESHOLD = 85.0                  # % — flag if CPU spikes above t
 RAM_ANOMALY_THRESHOLD = 90.0
 total_tasks_done = 0
 
+def get_gpu_info():
+    if GPUtil is None:
+        return {
+            "gpu_available": False,
+            "gpu_name": None,
+            "vram_total_gb": 0,
+            "vram_free_gb": 0,
+            "gpu_utilization": 0,
+        }
 
+    try:
+        gpus = GPUtil.getGPUs()
+        if not gpus:
+            return {
+                "gpu_available": False,
+                "gpu_name": None,
+                "vram_total_gb": 0,
+                "vram_free_gb": 0,
+                "gpu_utilization": 0,
+            }
+
+        g = gpus[0]
+        return {
+            "gpu_available": True,
+            "gpu_name": g.name,
+            "vram_total_gb": round(g.memoryTotal / 1024, 2),
+            "vram_free_gb": round(g.memoryFree / 1024, 2),
+            "gpu_utilization": round(g.load * 100, 2),
+        }
+    except Exception:
+        return {
+            "gpu_available": False,
+            "gpu_name": None,
+            "vram_total_gb": 0,
+            "vram_free_gb": 0,
+            "gpu_utilization": 0,
+        }
 # ══════════════════════════════════════════════════════════════════════════
 # /status  — Heartbeat + live metrics
 # ══════════════════════════════════════════════════════════════════════════
 @app.route('/status', methods=['GET'])
 def status():
     cpu = psutil.cpu_percent(interval=0.1)
-    ram = psutil.virtual_memory().percent
+
+    vm = psutil.virtual_memory()
+    ram = vm.percent
+    ram_free_gb = round(vm.available / (1024 ** 3), 2)
+    ram_total_gb = round(vm.total / (1024 ** 3), 2)
+
+    gpu_info = get_gpu_info()
 
     anomaly = cpu > CPU_ANOMALY_THRESHOLD or ram > RAM_ANOMALY_THRESHOLD
 
     return jsonify({
-        "node":             NODE_NAME,
-        "port":             PORT,
-        "status":           "busy" if busy else "free",
-        "cpu":              cpu,
-        "ram":              ram,
-        "anomaly":          anomaly,          # NEW: flag for dashboard warning
-        "total_tasks_done": total_tasks_done, # NEW: lifetime counter
-    })
+    "node":             NODE_NAME,
+    "port":             PORT,
+    "status":           "busy" if busy else "free",
+    "cpu":              cpu,
+    "ram":              ram,
+    "ram_free_gb":      ram_free_gb,
+    "ram_total_gb":     ram_total_gb,
+    "anomaly":          anomaly,
+    "total_tasks_done": total_tasks_done,
+
+    "gpu_available":    gpu_info["gpu_available"],
+    "gpu_name":         gpu_info["gpu_name"],
+    "vram_total_gb":    gpu_info["vram_total_gb"],
+    "vram_free_gb":     gpu_info["vram_free_gb"],
+    "gpu_utilization":  gpu_info["gpu_utilization"],
+})
 
 
 # ══════════════════════════════════════════════════════════════════════════
@@ -68,8 +122,23 @@ def process():
         payload = request.json
         data    = payload.get("data", [])
         task    = payload.get("task", "sort")
+        gpu_required = payload.get("gpu_required", False)
+        min_vram_gb = payload.get("min_vram_gb", 0)
+        min_ram_gb = payload.get("min_ram_gb", 0)
 
         print(f"\n[{NODE_NAME}] task='{task}', {len(data)} items")
+        gpu_info = get_gpu_info()
+        vm = psutil.virtual_memory()
+        ram_free_gb = round(vm.available / (1024 ** 3), 2)
+
+        if gpu_required and not gpu_info["gpu_available"]:
+            raise RuntimeError("GPU required but not available on this worker")
+
+        if gpu_info["vram_free_gb"] < min_vram_gb:
+            raise RuntimeError(f"Insufficient VRAM: required {min_vram_gb} GB")
+
+        if ram_free_gb < min_ram_gb:
+            raise RuntimeError(f"Insufficient free RAM: required {min_ram_gb} GB")
         start = time.time()
 
         # ── Task execution ─────────────────────────────────────────────
@@ -115,33 +184,41 @@ def process():
             "ram_after":  ram_after,
             "anomaly":    cpu_after > CPU_ANOMALY_THRESHOLD,
             "timestamp":  time.strftime("%H:%M:%S"),
+            "gpu_required": gpu_required,
+            "min_vram_gb": min_vram_gb,
+            "min_ram_gb": min_ram_gb,
         }
         task_history.append(log_entry)
 
         print(f"[{NODE_NAME}] Done in {elapsed}s | CPU {cpu_before}→{cpu_after}%")
 
         return jsonify({
-            "result":     result,
-            "node":       NODE_NAME,
-            "task":       task,
-            "time_taken": elapsed,
-            "items_in":   len(data),
-            "cpu_before": cpu_before,
-            "cpu_after":  cpu_after,
-            "ram_before": ram_before,
-            "ram_after":  ram_after,
-            "anomaly":    cpu_after > CPU_ANOMALY_THRESHOLD,
-            "status":     "done",
-        })
+          "result":        result,
+           "node":          NODE_NAME,
+          "task":          task,
+          "time_taken":    elapsed,
+          "items_in":      len(data),
+          "cpu_before":    cpu_before,
+          "cpu_after":     cpu_after,
+          "ram_before":    ram_before,
+          "ram_after":     ram_after,
+          "anomaly":       cpu_after > CPU_ANOMALY_THRESHOLD,
+          "status":        "done",
+          "gpu_required":  gpu_required,
+          "min_vram_gb":   min_vram_gb,
+        "min_ram_gb":    min_ram_gb,})
 
     except Exception as e:
         print(f"[{NODE_NAME}] ERROR: {e}")
         return jsonify({
-            "result":     [],
-            "node":       NODE_NAME,
-            "status":     "error",
-            "error":      str(e),
-            "time_taken": 0,
+           "result":        [],
+           "node":          NODE_NAME,
+           "status":        "error",
+           "error":         str(e),
+           "time_taken":    0,
+           "gpu_required":  gpu_required,
+           "min_vram_gb":   min_vram_gb,
+        "min_ram_gb":    min_ram_gb,
         }), 500
 
     finally:
