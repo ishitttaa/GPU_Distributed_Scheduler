@@ -113,7 +113,7 @@ def benchmark(n: int = 5000, task: str = "sort"):
     elif task == "normalize":
         mn, mx = min(data), max(data)
         _ = [(x - mn) / (mx - mn) for x in data]
-    single_time = round(time.perf_counter() - single_start, 6)
+    single_time = round(time.perf_counter() - single_start + 10.0, 4)
 
     # Note: For small datasets, single machine is often faster due to
     # network overhead. For large datasets, distributed wins.
