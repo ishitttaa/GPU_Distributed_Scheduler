@@ -16,7 +16,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 WORKERS = [
     "http://172.16.70.87:8001",
     "http://172.16.68.7:8001",
-    "http://172.16.68.38:8001",
+    "http://172.16.73.132:8001",
 ]
 
 TIMEOUT = 5
